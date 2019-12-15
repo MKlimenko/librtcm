@@ -21,6 +21,9 @@ rtcm3_rc rtcm3_decode_orbit_clock(const uint8_t buff[],
                                   rtcm_msg_orbit_clock *msg_orbit_clock);
 rtcm3_rc rtcm3_decode_code_bias(const uint8_t buff[],
                                 rtcm_msg_code_bias *msg_code_bias);
+rtcm3_rc rtcm3_decode_ura(const uint8_t buff[], rtcm_msg_ura *msg_ura);
+rtcm3_rc rtcm3_decode_high_rate_clock(
+    const uint8_t buff[], rtcm_msg_high_rate_clock *msg_high_rate_clock);
 rtcm3_rc rtcm3_decode_phase_bias(const uint8_t buff[],
                                  rtcm_msg_phase_bias *msg_phase_bias);
 

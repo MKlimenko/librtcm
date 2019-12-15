@@ -325,6 +325,16 @@ typedef struct {
 } rtcm_msg_ssr_code_bias_sat;
 
 typedef struct {
+    uint8_t sat_id;
+    uint8_t ura;
+} rtcm_msg_ssr_ura_sat;
+
+typedef struct {
+    uint8_t sat_id;
+    int32_t high_rate_clock;
+} rtcm_msg_ssr_high_rate_clock_sat;
+
+typedef struct {
   uint8_t signal_id;
   bool integer_indicator;
   uint8_t widelane_indicator;
@@ -360,6 +370,16 @@ typedef struct {
   rtcm_msg_ssr_header header;
   rtcm_msg_ssr_code_bias_sat sats[MAX_SSR_SATELLITES];
 } rtcm_msg_code_bias;
+
+typedef struct {
+    rtcm_msg_ssr_header header;
+    rtcm_msg_ssr_ura_sat sats[MAX_SSR_SATELLITES];
+} rtcm_msg_ura;
+
+typedef struct {
+    rtcm_msg_ssr_header header;
+    rtcm_msg_ssr_high_rate_clock_sat sats[MAX_SSR_SATELLITES];
+} rtcm_msg_high_rate_clock;
 
 typedef struct {
   rtcm_msg_ssr_header header;

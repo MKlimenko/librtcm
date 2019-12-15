@@ -104,13 +104,13 @@ enum rtcm3_rc_e get_number_of_bits_for_iode(
  *            TYPE       GPS     GLOASS    GALILEO    QZSS     BEIDOU     SBAS
  *         ----------------------------------------------------------------------
  *
- *          SSR OBT   : 1057      1063      1240*     1246*     1258*       -
- *              CLK   : 1058      1064      1241*     1247*     1259*       -
- *              BIAS  : 1059      1065      1242*     1248*     1260*       -
- *              OBTCLK: 1060      1066      1243*     1249*     1261*       -
- *              URA   : 1061      1067      1244*     1250*     1262*       -
- *              HRCLK : 1062      1068      1245*     1251*     1263*       -
- *              PHBIAS: 1265*     1266*     1267*     1268*     1270*      1269*
+ *          SSR OBT   : 1057      1063      1240*     1246*     1258*     1252*
+ *              CLK   : 1058      1064      1241*     1247*     1259*     1253*
+ *              BIAS  : 1059      1065      1242*     1248*     1260*     1254*
+ *              OBTCLK: 1060      1066      1243*     1249*     1261*     1255*
+ *              URA   : 1061      1067      1244*     1250*     1262*     1256*
+ *              HRCLK : 1062      1068      1245*     1251*     1263*     1257*
+ *              PHBIAS: 1265*     1266*     1267*     1268*     1270*     1269*
  *                    (* means that these RTCM messages are still draft )
  */
 
@@ -118,22 +118,32 @@ bool is_ssr_orbit_clock_message(const uint16_t message_num) {
   return message_num == 1057 || message_num == 1060 || message_num == 1063 ||
          message_num == 1066 || message_num == 1240 || message_num == 1243 ||
          message_num == 1246 || message_num == 1249 || message_num == 1258 ||
-         message_num == 1261;
+         message_num == 1261 || message_num == 1252 || message_num == 1255;
 }
 
 bool is_ssr_orbit_message(const uint16_t message_num) {
   return message_num == 1057 || message_num == 1063 || message_num == 1240 ||
-         message_num == 1246 || message_num == 1258;
+         message_num == 1246 || message_num == 1258 || message_num == 1252;
 }
 
 bool is_ssr_clock_message(const uint16_t message_num) {
   return message_num == 1058 || message_num == 1064 || message_num == 1241 ||
-         message_num == 1247 || message_num == 1259;
+         message_num == 1247 || message_num == 1259 || message_num == 1253;
 }
 
 bool is_ssr_code_biases_message(const uint16_t message_num) {
   return message_num == 1059 || message_num == 1065 || message_num == 1242 ||
-         message_num == 1248 || message_num == 1260;
+         message_num == 1248 || message_num == 1260 || message_num == 1254;
+}
+
+bool is_ssr_ura_message(const uint16_t message_num) {
+  return message_num == 1061 || message_num == 1067 || message_num == 1244 ||
+         message_num == 1250 || message_num == 1262 || message_num == 1256;
+}
+
+bool is_ssr_high_rate_clock_message(const uint16_t message_num) {
+  return message_num == 1062 || message_num == 1068 || message_num == 1245 ||
+         message_num == 1251 || message_num == 1263 || message_num == 1257;
 }
 
 bool is_ssr_phase_biases_message(const uint16_t message_num) {
@@ -386,6 +396,83 @@ rtcm3_rc rtcm3_decode_code_bias(const uint8_t buff[],
       sat->signals[j].code_bias = rtcm_getbits(buff, bit, 14);
       bit += 14;
     }
+  }
+  return RC_OK;
+}
+
+/** Decode an RTCMv3 User range accuracy message
+ *
+ * \param buff The input data buffer
+ * \param msg_ura RTCM message struct
+ * \return  - RC_OK : Success
+ *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
+ *          - RC_INVALID_MESSAGE : Unknown constellation
+ */
+rtcm3_rc rtcm3_decode_ura(const uint8_t buff[], rtcm_msg_ura *msg_ura) {
+  assert(msg_ura);
+  uint16_t bit = 0;
+  if (!(RC_OK == decode_ssr_header(buff, &bit, &msg_ura->header))) {
+    return RC_INVALID_MESSAGE;
+  }
+
+  if (!is_ssr_ura_message(msg_ura->header.message_num)) {
+    return RC_MESSAGE_TYPE_MISMATCH;
+  }
+
+  for (int i = 0; i < msg_ura->header.num_sats; i++) {
+    rtcm_msg_ssr_ura_sat *sat = &msg_ura->sats[i];
+
+    uint8_t number_of_bits_for_sat_id;
+    if (!(RC_OK == get_number_of_bits_for_sat_id(msg_ura->header.constellation,
+                                                 &number_of_bits_for_sat_id))) {
+      return RC_INVALID_MESSAGE;
+    }
+
+    sat->sat_id = rtcm_getbitu(buff, bit, number_of_bits_for_sat_id);
+    bit += number_of_bits_for_sat_id;
+
+    sat->ura = rtcm_getbitu(buff, bit, 6);
+    bit += 6;
+  }
+  return RC_OK;
+}
+
+/** Decode an RTCMv3 High rate clock correction message
+ *
+ * \param buff The input data buffer
+ * \param msg_high_rate_clock RTCM message struct
+ * \return  - RC_OK : Success
+ *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
+ *          - RC_INVALID_MESSAGE : Unknown constellation
+ */
+rtcm3_rc rtcm3_decode_high_rate_clock(
+    const uint8_t buff[], rtcm_msg_high_rate_clock *msg_high_rate_clock) {
+  assert(msg_high_rate_clock);
+  uint16_t bit = 0;
+  if (!(RC_OK == decode_ssr_header(buff, &bit, &msg_high_rate_clock->header))) {
+    return RC_INVALID_MESSAGE;
+  }
+
+  if (!is_ssr_high_rate_clock_message(
+          msg_high_rate_clock->header.message_num)) {
+    return RC_MESSAGE_TYPE_MISMATCH;
+  }
+
+  for (int i = 0; i < msg_high_rate_clock->header.num_sats; i++) {
+    rtcm_msg_ssr_high_rate_clock_sat *sat = &msg_high_rate_clock->sats[i];
+
+    uint8_t number_of_bits_for_sat_id;
+    if (!(RC_OK == get_number_of_bits_for_sat_id(
+                       msg_high_rate_clock->header.constellation,
+                       &number_of_bits_for_sat_id))) {
+      return RC_INVALID_MESSAGE;
+    }
+
+    sat->sat_id = rtcm_getbitu(buff, bit, number_of_bits_for_sat_id);
+    bit += number_of_bits_for_sat_id;
+
+    sat->high_rate_clock = rtcm_getbitu(buff, bit, 22);
+    bit += 22;
   }
   return RC_OK;
 }
